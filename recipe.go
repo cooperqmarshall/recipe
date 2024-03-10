@@ -1,4 +1,4 @@
-package main
+package recipe
 
 import (
 	"bufio"
@@ -35,8 +35,7 @@ func (r *Recipe) read_jsonld(b []byte) error {
 
 	r.Name = r.jsonld.Name
 	r.Ingredients = r.jsonld.RecipeIngredient
-	r.parse_instructions(r.jsonld.RecipeInstructions)
-
+	err = r.parse_instructions(r.jsonld.RecipeInstructions)
 	return err
 }
 
@@ -55,7 +54,10 @@ func (r *Recipe) parse_instructions(steps []Step) error {
 				return errors.New("HowToSection does not contain 'ItemListElement' key")
 			}
 			// HowToSection type will have a non-nil ItemListElement containing []HowToStep
-			r.parse_instructions(s.ItemListElement)
+			err := r.parse_instructions(s.ItemListElement)
+			if err != nil {
+				return err
+			}
 		} else {
 			return errors.New("Unexpected Step type")
 		}
@@ -71,7 +73,4 @@ func get_stdin() []byte {
 		panic(err)
 	}
 	return std_in_text
-}
-
-func main() {
 }

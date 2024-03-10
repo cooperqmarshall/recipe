@@ -1,3 +1,3 @@
-module github.com/cooperqmarshall/recipe-parse
+module github.com/cooperqmarshall/recipe
 
 go 1.19
