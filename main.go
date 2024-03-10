@@ -3,22 +3,20 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"os"
 )
 
-type HowToStep struct {
-	Text string
-}
-
-type HowToSection struct {
-	ItemListElement []HowToStep
+type Step struct {
+	Type            string `json:"@type"`
 	Text            string
+	ItemListElement []Step
 }
 
 type RecipeJsonld struct {
-	Name               string         `json:"name"`
-	RecipeIngredient   []string       `json:"recipeIngredient"`
-	RecipeInstructions []HowToSection `json:"recipeInstructions"`
+	Name               string
+	RecipeIngredient   []string
+	RecipeInstructions []Step
 }
 
 type Recipe struct {
@@ -28,40 +26,42 @@ type Recipe struct {
 	jsonld       RecipeJsonld
 }
 
-// read recipe information from jsonld blob into Recipe properties
+// Read recipe information from jsonld blob into recipe properties
 func (r *Recipe) read_jsonld(b []byte) error {
-	var rld RecipeJsonld
-	err := json.Unmarshal(b, &rld)
+	err := json.Unmarshal(b, &r.jsonld)
+	if err != nil {
+		return err
+	}
 
-	r.Name = rld.Name
-	r.Ingredients = rld.RecipeIngredient
-	r.Instructions = rld.parse_instructions()
+	r.Name = r.jsonld.Name
+	r.Ingredients = r.jsonld.RecipeIngredient
+	r.parse_instructions(r.jsonld.RecipeInstructions)
 
 	return err
 }
 
-func (rld *RecipeJsonld) parse_instructions() []string {
-	instructions := []string{}
-
-	for _, s := range rld.RecipeInstructions {
-		// if HowToStep
-		if s.Text != "" {
-			instructions = append(instructions, s.Text)
-		} else if s.ItemListElement != nil {
-			// if CreativeWork
-			parse_howtosteps(s.ItemListElement, instructions)
+// Extracts the instruction steps from recipeInstructions into []string.
+// This handels both HowToStep or HowToSection elements
+func (r *Recipe) parse_instructions(steps []Step) error {
+	for _, s := range steps {
+		// HowToStep type will have a non-nil Text attribute
+		if s.Type == "HowToStep" {
+			if s.Text == "" {
+				return errors.New("HowtoStep does not contain 'Text' key")
+			}
+			r.Instructions = append(r.Instructions, s.Text)
+		} else if s.Type == "HowToSection" {
+			if s.ItemListElement == nil {
+				return errors.New("HowToSection does not contain 'ItemListElement' key")
+			}
+			// HowToSection type will have a non-nil ItemListElement containing []HowToStep
+			r.parse_instructions(s.ItemListElement)
+		} else {
+			return errors.New("Unexpected Step type")
 		}
 	}
 
-	return instructions
-}
-
-func parse_howtosteps(steps []HowToStep, instructions []string) {
-	for _, step := range steps {
-		if step.Text != "" {
-			instructions = append(instructions, step.Text)
-		}
-	}
+	return nil
 }
 
 func get_stdin() []byte {

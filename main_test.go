@@ -4,7 +4,8 @@ import (
 	"testing"
 )
 
-func TestParse(t *testing.T) {
+func TestFullParse(t *testing.T) {
+	// tests name, ingredients, and []HowToStep instructions
 	b := []byte(`{
     "@context": "https://schema.org/",
     "@type": "Recipe",
@@ -97,31 +98,117 @@ func TestParse(t *testing.T) {
 	}
 
 	ingredients := []string{
-    "2 cups of flour",
+		"2 cups of flour",
 		"3/4 cup white sugar",
 		"2 teaspoons baking powder",
 		"1/2 teaspoon salt",
 		"1/2 cup butter",
 		"2 eggs",
-		"3/4 cup milk"}
-
-	for i, ingredient := range r.Ingredients {
-		if ingredients[i] != ingredient {
-			t.Errorf("Recipe Ingredient incorrect. Expected: %s, Actual: %s", ingredients[i], ingredient)
-		}
+		"3/4 cup milk",
 	}
+	ingredientsMatch(t, ingredients, r)
 
 	instructions := []string{
-    "Preheat the oven to 350 degrees F. Grease and flour a 9x9 inch pan.",
+		"Preheat the oven to 350 degrees F. Grease and flour a 9x9 inch pan.",
 		"In a large bowl, combine flour, sugar, baking powder, and salt.",
 		"Mix in the butter, eggs, and milk.",
 		"Spread into the prepared pan.",
 		"Bake for 30 to 35 minutes, or until firm.",
-		"Allow to cool and enjoy."}
+		"Allow to cool and enjoy.",
+	}
+	instructionsMatch(t, instructions, r)
+}
 
-	for i, instruction := range r.Instructions {
-		if instructions[i] != instruction  {
-			t.Errorf("Recipe Instruction incorrect. Expected: %s, Actual: %s", instructions[i], instruction)
+// tests instruction parsing when HowToSection type
+func TestSimpleInstructions(t *testing.T) {
+	b := []byte(`{"recipeInstructions": 
+        [{
+          "@type": "HowToSection",
+          "name": "Assemble the pie",
+          "itemListElement": [
+            {
+              "@type": "HowToStep",
+              "text": "In large bowl, gently mix filling ingredients; spoon into crust-lined pie plate."
+            }, {
+              "@type": "HowToStep",
+              "text": "Top with second crust. Cut slits or shapes in several places in top crust."
+            }
+          ]
+        }]
+    }`)
+
+	r := Recipe{}
+	err := r.read_jsonld(b)
+	if err != nil {
+		t.Errorf("%s", err)
+	}
+
+	if r.Name != "" {
+		t.Errorf("Recipe Name incorrect. Expected: \"\", Actual: %s", r.Name)
+	}
+
+	if r.Ingredients != nil {
+		t.Errorf("Recipe Ingredient incorrect. Expected: nil, Actual: %s", r.Ingredients)
+	}
+
+	instructions := []string{
+		"In large bowl, gently mix filling ingredients; spoon into crust-lined pie plate.",
+		"Top with second crust. Cut slits or shapes in several places in top crust.",
+	}
+	instructionsMatch(t, instructions, r)
+}
+
+// test if HowToStep is missing
+func TestBadHowToSection(t *testing.T) {
+	b := []byte(`{"recipeInstructions": 
+        [{
+          "@type": "HowToSection",
+          "name": "Assemble the pie",
+        }]
+    }`)
+
+	r := Recipe{}
+	err := r.read_jsonld(b)
+	if err == nil {
+		t.Errorf("Expected to Error due to missing 'itemListElement' in HowToSection")
+	}
+}
+
+// test if HowToStep is missing
+func TestBadHowToStep(t *testing.T) {
+	b := []byte(`{"recipeInstructions": 
+        [{
+          "@type": "HowToStep",
+        }]
+    }`)
+
+	r := Recipe{}
+	err := r.read_jsonld(b)
+	if err == nil {
+		t.Errorf("Expected to Error due to missing 'Text' in HowToStep")
+	}
+}
+
+func instructionsMatch(t *testing.T, instructions []string, r Recipe) {
+	if len(instructions) != len(r.Instructions) {
+		t.Errorf("Recipe Instruction incorrect length. Expected: %d, Actual: %d", len(instructions), len(r.Instructions))
+	} else {
+		for i, instruction := range instructions {
+			if r.Instructions[i] != instruction {
+				t.Errorf("Recipe Instruction incorrect. Expected: %s, Actual: %s", instructions[i], instruction)
+			}
+		}
+	}
+}
+
+func ingredientsMatch(t *testing.T, ingredients []string, r Recipe) {
+	if len(ingredients) != len(r.Ingredients) {
+		t.Errorf("Recipe Ingrediets incorrect length. Expected: %d, Actual: %d", len(ingredients), len(r.Ingredients))
+	} else {
+		for i, ingredient := range ingredients {
+			if r.Ingredients[i] != ingredient {
+				t.Errorf("Recipe Ingredient incorrect. Expected: %s, Actual: %s", ingredients[i], ingredient)
+			}
 		}
 	}
 }
