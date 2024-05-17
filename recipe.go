@@ -7,27 +7,27 @@ import (
 	"os"
 )
 
-type Step struct {
+type step struct {
 	Type            string `json:"@type"`
 	Text            string
-	ItemListElement []Step
+	ItemListElement []step
 }
 
-type RecipeJsonld struct {
+type recipeJsonld struct {
 	Name               string
 	RecipeIngredient   []string
-	RecipeInstructions []Step
+	RecipeInstructions []step
 }
 
 type Recipe struct {
 	Name         string
 	Ingredients  []string
 	Instructions []string
-	jsonld       RecipeJsonld
+	jsonld       recipeJsonld
 }
 
 // Read recipe information from jsonld blob into recipe properties
-func (r *Recipe) read_jsonld(b []byte) error {
+func (r *Recipe) Read_jsonld(b []byte) error {
 	err := json.Unmarshal(b, &r.jsonld)
 	if err != nil {
 		return err
@@ -41,7 +41,7 @@ func (r *Recipe) read_jsonld(b []byte) error {
 
 // Extracts the instruction steps from recipeInstructions into []string.
 // This handels both HowToStep or HowToSection elements
-func (r *Recipe) parse_instructions(steps []Step) error {
+func (r *Recipe) parse_instructions(steps []step) error {
 	for _, s := range steps {
 		// HowToStep type will have a non-nil Text attribute
 		if s.Type == "HowToStep" {

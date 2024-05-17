@@ -88,7 +88,7 @@ func TestFullParse(t *testing.T) {
   }`)
 
 	r := Recipe{}
-	err := r.read_jsonld(b)
+	err := r.Read_jsonld(b)
 	if err != nil {
 		t.Errorf("%s", err)
 	}
@@ -138,7 +138,7 @@ func TestSimpleInstructions(t *testing.T) {
     }`)
 
 	r := Recipe{}
-	err := r.read_jsonld(b)
+	err := r.Read_jsonld(b)
 	if err != nil {
 		t.Errorf("%s", err)
 	}
@@ -168,7 +168,7 @@ func TestBadHowToSection(t *testing.T) {
     }`)
 
 	r := Recipe{}
-	err := r.read_jsonld(b)
+	err := r.Read_jsonld(b)
 	if err == nil {
 		t.Errorf("Expected to Error due to missing 'itemListElement' in HowToSection")
 	}
@@ -183,7 +183,7 @@ func TestBadHowToStep(t *testing.T) {
     }`)
 
 	r := Recipe{}
-	err := r.read_jsonld(b)
+	err := r.Read_jsonld(b)
 	if err == nil {
 		t.Errorf("Expected to Error due to missing 'Text' in HowToStep")
 	}
