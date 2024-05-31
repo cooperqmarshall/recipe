@@ -17,6 +17,10 @@ type recipeJsonld struct {
 	Name               string
 	RecipeIngredient   []string
 	RecipeInstructions []step
+	Graph              []recipeJsonld `json:"@graph"`
+}
+
+type ldjson struct {
 }
 
 type Recipe struct {
@@ -33,10 +37,24 @@ func (r *Recipe) Read_jsonld(b []byte) error {
 		return err
 	}
 
-	r.Name = r.jsonld.Name
-	r.Ingredients = r.jsonld.RecipeIngredient
-	err = r.parse_instructions(r.jsonld.RecipeInstructions)
-	return err
+	if r.jsonld.RecipeIngredient != nil && r.jsonld.RecipeInstructions != nil {
+		r.Name = r.jsonld.Name
+		r.Ingredients = r.jsonld.RecipeIngredient
+		err = r.parse_instructions(r.jsonld.RecipeInstructions)
+		return err
+	}
+
+	// search through graph array for recipe ldjsons
+	for _, i := range r.jsonld.Graph {
+		if i.RecipeIngredient != nil && i.RecipeInstructions != nil {
+			r.Name = i.Name
+			r.Ingredients = i.RecipeIngredient
+			err = r.parse_instructions(i.RecipeInstructions)
+			return err
+		}
+	}
+
+	return errors.New("Unable to find full recipe in ldjson")
 }
 
 // Extracts the instruction steps from recipeInstructions into []string.
