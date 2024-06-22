@@ -600,6 +600,14 @@ func TestComplexParse(t *testing.T) {
 		t.Errorf("Recipe Name incorrect. Expected: My Best Apple Pie Recipe, Actual: %s", r.Name)
 	}
 
+	if r.ImageUrl != "https://sallysbakingaddiction.com/wp-content/uploads/2017/07/slice-of-apple-pie-2.jpg" {
+		t.Errorf("Recipe Image Url incorrect. Expected: https://sallysbakingaddiction.com/wp-content/uploads/2017/07/slice-of-apple-pie-2.jpg, Actual: %s", r.ImageUrl)
+	}
+     
+	if r.ThumbnailUrl != "https://sallysbakingaddiction.com/wp-content/uploads/2017/07/slice-of-apple-pie-2-260x195.jpg" {
+		t.Errorf("Recipe Thumbnail Url incorrect. Expected: https://sallysbakingaddiction.com/wp-content/uploads/2017/07/slice-of-apple-pie-2-260x195.jpg, Actual: %s", r.ThumbnailUrl)
+	}
+
 	ingredients := []string{
 		"Homemade Pie Crust or All Butter Pie Crust (both recipes make 2 crusts, 1 for bottom and 1 for top)",
 		"10 cups (1250g) 1/4-inch-thick apple slices (about 8 large peeled and cored apples)*",

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"regexp"
+	"strconv"
 )
 
 type step struct {
@@ -18,15 +20,15 @@ type recipeJsonld struct {
 	RecipeIngredient   []string
 	RecipeInstructions []step
 	Graph              []recipeJsonld `json:"@graph"`
-}
-
-type ldjson struct {
+	Image              []string
 }
 
 type Recipe struct {
 	Name         string
 	Ingredients  []string
 	Instructions []string
+	ImageUrl     string
+	ThumbnailUrl string
 	jsonld       recipeJsonld
 }
 
@@ -34,7 +36,9 @@ type Recipe struct {
 func (r *Recipe) Read_jsonld(b []byte) error {
 	err := json.Unmarshal(b, &r.jsonld)
 	if err != nil {
-		return err
+		if err.Error() != "json: cannot unmarshal object into Go struct field recipeJsonld.@graph.Image of type []string" {
+			return err
+		}
 	}
 
 	if r.jsonld.RecipeIngredient != nil && r.jsonld.RecipeInstructions != nil {
@@ -49,12 +53,50 @@ func (r *Recipe) Read_jsonld(b []byte) error {
 		if i.RecipeIngredient != nil && i.RecipeInstructions != nil {
 			r.Name = i.Name
 			r.Ingredients = i.RecipeIngredient
-			err = r.parse_instructions(i.RecipeInstructions)
-			return err
+			err1 := r.parse_instructions(i.RecipeInstructions)
+			err2 := r.parse_images(i.Image)
+			return errors.Join(err1, err2)
 		}
 	}
 
 	return errors.New("Unable to find full recipe in ldjson")
+}
+
+// Parses a []string containing urls to images. Stores the url to the full
+// image in recipe.ImageUrl and a smaller image in recipe.ThumbnailUrl
+func (r *Recipe) parse_images(images []string) error {
+	if len(images) == 0 {
+		return errors.New("no images found")
+	}
+
+	shortest_url := images[0]
+	// matches two numbers with an "x" in between e.g. "400x300"
+	re := regexp.MustCompile(`.*?(\d+)x(\d+).*`)
+	for _, image_url := range images {
+		if len(image_url) < len(shortest_url) {
+			shortest_url = image_url
+		}
+
+		matches := re.FindStringSubmatch(image_url)
+		if len(matches) > 1 {
+			width, err := strconv.ParseFloat(matches[1], 0)
+			if err != nil {
+				continue
+			}
+			height, err := strconv.ParseFloat(matches[2], 0)
+			if err != nil {
+				continue
+			}
+            // want the 4x3 aspect ratio image for the thumbnail
+			if width/height == 4.0/3.0 {
+				r.ThumbnailUrl = image_url
+			}
+		}
+	}
+    // assuming shortest url is the one without the aspect ratio defined and
+    // will be the highest resolution option
+	r.ImageUrl = shortest_url
+	return nil
 }
 
 // Extracts the instruction steps from recipeInstructions into []string.
